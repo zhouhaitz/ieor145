@@ -19,8 +19,9 @@ Rule: only CALIBRATED inputs are ever tuned, and only by changing inputs and rer
 | Customers per mid-week day | 300 | ASSUMPTION | Average successful neighborhood bakery; varied |
 | Day-to-day variability (cv) | 0.15 | ASSUMPTION | Varied in experiment Q2 |
 | Salvage value | 1/3 of price | SOURCED | Too Good To Go bags ≈ 1/3 of retail ([Axios](https://www.axios.com/2025/11/12/whole-foods-too-good-to-go-surprise-bags)); Acme Berkeley lists $18 value for $5.99 ([TGTG](https://www.toogoodtogo.com/en-us/find/berkeley/acmebread-berkeley/bakedgoods/1489908)) |
+| Day-old value share (share of value an item keeps on day 2) | commuter 0.50, regular 0.65, bargain 0.80 | ASSUMPTION | Applies to any item sold day-old (only sourdough today); to be replaced by survey answers; varied in experiment Q5 |
 | Customer-type hourly shapes | see config | ASSUMPTION | Commuter early, regular midday, bargain late; type shares are then CALIBRATED so the total matches Popular Times |
-| Willingness to pay, spread, day-old penalty, basket sizes | see config | CALIBRATED | Start from `configs/baseline_inputs.json`; scales tuned so report-card metrics land in the bands below; ties go to scales nearest 1 (log: `docs/calibration_log.csv`) |
+| Willingness to pay, spread, basket sizes | see config | CALIBRATED | Start from `configs/baseline_inputs.json`; scales tuned so report-card metrics land in the bands below; ties go to scales nearest 1 (log: `docs/calibration_log.csv`) |
 | Past pricing practice | menu price; 30% off last hour; Tue/Wed cookie promo; deal of the day on 40% of days; +5% menu increase on day 30 | ASSUMPTION | Common bakery practices; the varied prices are what make price sensitivity estimable (Lecture 16 on confounders) |
 
 ## Report-card targets (what calibration aims for)
