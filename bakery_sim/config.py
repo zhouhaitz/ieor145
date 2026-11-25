@@ -64,6 +64,9 @@ class HistoricalPricing:
     promo_hours: list[int]  # open hours the promo applies (not near closing, to avoid confounding)
     menu_increase_day_index: int  # day index from which base prices rise
     menu_increase_fraction: float  # e.g. 0.05 = +5%
+    daily_deal_probability: float = 0.0  # chance a day has a "deal of the day" on one random fresh item
+    daily_deal_levels: list[float] = field(default_factory=list)  # ladder levels a deal can use
+    daily_deal_hours: int = 2  # consecutive hours a deal lasts (never in the end-of-day hours)
 
 
 @dataclass(frozen=True)
@@ -150,7 +153,9 @@ def validate_scenario(scenario: Scenario) -> None:
     if any(batch.hour not in scenario.open_hours for batch in scenario.bake_schedule):
         problems.append("every bake batch hour must be an open hour")
     pricing = scenario.historical_pricing
-    for level in [1.0, pricing.end_of_day_level, pricing.day_old_level, pricing.promo_level]:
+    fixed_levels = [1.0, pricing.end_of_day_level, pricing.day_old_level, pricing.promo_level]
+    used_levels = fixed_levels + list(pricing.daily_deal_levels)
+    for level in used_levels:
         if not any(abs(level - ladder_level) < 1e-9 for ladder_level in scenario.price_ladder):
             problems.append(f"price level {level} is not on price_ladder")
     if problems:

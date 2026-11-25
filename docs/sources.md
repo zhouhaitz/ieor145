@@ -20,12 +20,14 @@ Rule: only CALIBRATED inputs are ever tuned, and only by changing inputs and rer
 | Day-to-day variability (cv) | 0.15 | ASSUMPTION | Varied in experiment Q2 |
 | Salvage value | 1/3 of price | SOURCED | Too Good To Go bags ≈ 1/3 of retail ([Axios](https://www.axios.com/2025/11/12/whole-foods-too-good-to-go-surprise-bags)); Acme Berkeley lists $18 value for $5.99 ([TGTG](https://www.toogoodtogo.com/en-us/find/berkeley/acmebread-berkeley/bakedgoods/1489908)) |
 | Customer-type hourly shapes | see config | ASSUMPTION | Commuter early, regular midday, bargain late; type shares are then CALIBRATED so the total matches Popular Times |
-| Willingness to pay, spread, day-old penalty, basket sizes | see config | CALIBRATED | Tuned so report-card metrics land in the target bands below |
+| Willingness to pay, spread, day-old penalty, basket sizes | see config | CALIBRATED | Start from `configs/baseline_inputs.json`; scales tuned so report-card metrics land in the bands below; ties go to scales nearest 1 (log: `docs/calibration_log.csv`) |
+| Past pricing practice | menu price; 30% off last hour; Tue/Wed cookie promo; deal of the day on 40% of days; +5% menu increase on day 30 | ASSUMPTION | Common bakery practices; the varied prices are what make price sensitivity estimable (Lecture 16 on confounders) |
 
 ## Report-card targets (what calibration aims for)
 | Metric | Band | Status | Source / reasoning |
 | --- | --- | --- | --- |
-| Hourly traffic shape error (max abs. share difference) | ≤ 0.02 | SOURCED | Popular Times shape above |
+| Hourly traffic shape error (model's expected share vs. Popular Times, max abs.) | ≤ 0.02 | SOURCED | Popular Times shape above |
+| Price elasticity (all fresh prices −15%, arc elasticity of units) | 0.8–2.0 | SOURCED lower bound | Category elasticity for food away from home ≈ 0.81 ([Andreyeva et al. 2010](https://pmc.ncbi.nlm.nih.gov/articles/PMC2804646)); a single bakery is at least that elastic because customers can switch stores. Upper bound is an assumption |
 | Items per purchase | 1.2–2.2 | SOURCED | Café/bakery visits: 1–2 items ([DojoBusiness](https://dojobusiness.com/blogs/news/coffee-shop-average-ticket)); bakeries skew higher (loaf + pastry) |
 | Average ticket (baked goods only, no drinks) | $5–$14 | SOURCED | Coffee-shop ticket $7.81–$12 incl. drinks ([DojoBusiness](https://dojobusiness.com/blogs/news/coffee-shop-average-ticket)) |
 | Purchase rate (walk-ins who buy) | 60–90% | ASSUMPTION | No public source found; varied |

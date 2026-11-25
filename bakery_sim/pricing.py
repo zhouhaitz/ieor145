@@ -10,8 +10,12 @@ from __future__ import annotations
 
 import math
 
+import numpy as np
+
 from bakery_sim.config import Scenario
 from bakery_sim.interfaces import OptionKey, PriceDecision, PricingContext
+
+DEAL_STREAM_ID = 7  # separate random stream so deals never change the customers drawn for a day
 
 
 def current_menu_price(scenario: Scenario, product_id: str, day_index: int) -> float:
@@ -62,8 +66,24 @@ class FixedPricePolicy:
         return decisions
 
 
+def daily_deal(scenario: Scenario, day_index: int) -> tuple[str, list[int], float] | None:
+    """The day's "deal of the day" as (product_id, hours, level), or None; deterministic per seed and day."""
+    historical = scenario.historical_pricing
+    if historical.daily_deal_probability <= 0 or not historical.daily_deal_levels:
+        return None
+    rng = np.random.default_rng(np.random.SeedSequence([scenario.seed, day_index, DEAL_STREAM_ID]))
+    if rng.random() >= historical.daily_deal_probability:
+        return None
+    first_end_of_day_hour = scenario.close_hour - historical.end_of_day_hours
+    possible_start_hours = list(range(scenario.open_hour, first_end_of_day_hour - historical.daily_deal_hours + 1))
+    start_hour = int(rng.choice(possible_start_hours))
+    product_id = str(rng.choice([product.product_id for product in scenario.products]))
+    level = float(rng.choice(historical.daily_deal_levels))
+    return product_id, list(range(start_hour, start_hour + historical.daily_deal_hours)), level
+
+
 class HistoricalPricingPolicy:
-    """Menu price + end-of-day discount + weekday promo + day-old level + one menu price increase."""
+    """Menu price + end-of-day discount + weekday promo + random deal of the day + day-old level + menu increase."""
 
     name = "historical"
 
@@ -76,6 +96,8 @@ class HistoricalPricingPolicy:
         first_end_of_day_hour = scenario.close_hour - historical.end_of_day_hours
         is_end_of_day = context.hour >= first_end_of_day_hour
         is_promo_time = context.day_of_week in historical.promo_days_of_week and context.hour in historical.promo_hours
+        deal = daily_deal(scenario, context.day_index)
+        deal_product_id = deal[0] if deal and context.hour in deal[1] else None
 
         decisions: dict[OptionKey, PriceDecision] = {}
         for product_id, age in _stocked_options(context):
@@ -83,6 +105,8 @@ class HistoricalPricingPolicy:
                 level, reason = historical.day_old_level, "day_old"
             elif is_end_of_day:
                 level, reason = historical.end_of_day_level, "end_of_day"
+            elif product_id == deal_product_id:
+                level, reason = deal[2], "deal"
             elif is_promo_time and product_id == historical.promo_product_id:
                 level, reason = historical.promo_level, "promo"
             else:

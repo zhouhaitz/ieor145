@@ -131,3 +131,27 @@ def test_all_historical_levels_are_on_ladder(baseline_scenario):
         decisions = policy.prices(stocked_context(baseline_scenario, TUESDAY_INDEX, "Tue", hour=hour))
         for decision in decisions.values():
             assert any(math.isclose(decision.level, level) for level in baseline_scenario.price_ladder)
+
+
+def test_daily_deal_is_deterministic_and_avoids_end_of_day(baseline_scenario):
+    from bakery_sim.pricing import daily_deal
+
+    historical = baseline_scenario.historical_pricing
+    first_end_of_day_hour = baseline_scenario.close_hour - historical.end_of_day_hours
+    deals = [daily_deal(baseline_scenario, day_index) for day_index in range(200)]
+    assert deals == [daily_deal(baseline_scenario, day_index) for day_index in range(200)]
+    active_deals = [deal for deal in deals if deal is not None]
+    assert abs(len(active_deals) / 200 - historical.daily_deal_probability) < 0.1
+    for _product_id, hours, level in active_deals:
+        assert max(hours) < first_end_of_day_hour and min(hours) >= baseline_scenario.open_hour
+        assert level in historical.daily_deal_levels
+
+
+def test_no_deals_when_probability_is_zero(baseline_scenario):
+    from bakery_sim.pricing import daily_deal
+
+    historical = type(baseline_scenario.historical_pricing)(
+        **{**baseline_scenario.historical_pricing.__dict__, "daily_deal_probability": 0.0}
+    )
+    no_deal_scenario = baseline_scenario.with_overrides(historical_pricing=historical)
+    assert all(daily_deal(no_deal_scenario, day_index) is None for day_index in range(50))
