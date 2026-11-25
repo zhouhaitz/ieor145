@@ -36,7 +36,7 @@ class CustomerType:
     name: str
     wtp_multiplier: dict[str, float]  # average willingness to pay = multiplier * base_price, per product
     wtp_spread: float  # sigma_k in dollars; larger = less price sensitive
-    day_old_penalty: float  # delta_k in dollars subtracted from value of a day-old item
+    day_old_value_share: float  # r_k: share of an item's value kept when it is a day old (0.65 = worth 65% of fresh)
     basket_extra_mean: float  # m_k; planned basket size N = 1 + Poisson(m_k)
     hourly_shape: list[float]  # relative arrival intensity per open hour (normalized in arrivals.py)
     weekend_hourly_shape: list[float]  # same for Sat/Sun
@@ -138,6 +138,8 @@ def validate_scenario(scenario: Scenario) -> None:
             problems.append(f"{customer_type.type_id}: wtp_multiplier must cover exactly {sorted(product_ids)}")
         if customer_type.wtp_spread <= 0:
             problems.append(f"{customer_type.type_id}: wtp_spread must be positive")
+        if not 0 < customer_type.day_old_value_share <= 1:
+            problems.append(f"{customer_type.type_id}: day_old_value_share must be in (0, 1]")
     for day_of_week in DAYS_OF_WEEK:
         shares = scenario.type_share.get(day_of_week, {})
         if set(shares) != type_ids or abs(sum(shares.values()) - 1) > 1e-6:

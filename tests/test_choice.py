@@ -135,3 +135,17 @@ def test_empirical_choice_frequencies_match_probabilities(baseline_scenario: Sce
     probabilities = choice_probabilities(baseline_scenario, customer_type, available_options, prices)
     for option, probability in probabilities.items():
         assert counts[option] / simulation_count == pytest.approx(probability, abs=0.015)
+
+
+def test_day_old_item_keeps_a_share_of_its_value(baseline_scenario):
+    regular = baseline_scenario.customer_type("regular")
+    fresh_value = regular.wtp_multiplier["sourdough"] * baseline_scenario.product("sourdough").base_price
+    price = 3.0
+    fresh_utility, day_old_utility = mean_utilities(
+        baseline_scenario,
+        regular,
+        [("sourdough", 0), ("sourdough", 1)],
+        {("sourdough", 0): price, ("sourdough", 1): price},
+    )
+    assert fresh_utility == pytest.approx((fresh_value - price) / regular.wtp_spread)
+    assert day_old_utility == pytest.approx((regular.day_old_value_share * fresh_value - price) / regular.wtp_spread)

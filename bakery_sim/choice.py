@@ -3,9 +3,10 @@ Customer choice: multinomial logit (MNL) from willingness to pay (Subagent A).
 
 A type-k customer's utility for option j = (product, age) at price p is
 
-    U_kj = (w_kj - p - delta_k * age) / sigma_k + epsilon_kj,   U_k0 = epsilon_k0 (leave)
+    U_kj = (w_kj * r_k ** age - p) / sigma_k + epsilon_kj,   U_k0 = epsilon_k0 (leave)
 
-with w_kj = wtp_multiplier[k][product] * base_price and epsilon i.i.d. standard Gumbel,
+with w_kj = wtp_multiplier[k][product] * base_price, r_k = day_old_value_share (a day-old item keeps
+that share of its value, for any product sold day-old), and epsilon i.i.d. standard Gumbel,
 which gives MNL choice probabilities (Lecture 15). With one item on offer this reduces to
 1 - F(p) with a logistic F (Lecture 16). The Gumbel noise is pre-drawn per customer and
 pick (Customer.pick_noise), so a choice is the argmax over options currently on the shelf.
@@ -25,12 +26,12 @@ def mean_utilities(
     options: list[OptionKey],
     prices: dict[OptionKey, float],
 ) -> np.ndarray:
-    """Deterministic utility (w - p - delta*age) / sigma for each option, in the order given."""
+    """Deterministic utility (w * r**age - p) / sigma for each option, in the order given."""
     utilities = []
     for option in options:
         product_id, age = option
         willingness_to_pay = customer_type.wtp_multiplier[product_id] * scenario.product(product_id).base_price
-        net_value = willingness_to_pay - prices[option] - customer_type.day_old_penalty * age
+        net_value = willingness_to_pay * customer_type.day_old_value_share**age - prices[option]
         utilities.append(net_value / customer_type.wtp_spread)
     return np.array(utilities, dtype=float)
 

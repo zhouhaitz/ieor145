@@ -48,7 +48,6 @@
         "baguette": 0.75
       },
       "wtp_spread": 1.5,
-      "day_old_penalty": 3.0,
       "basket_extra_mean": 0.2,
       "hourly_shape": [
         10,
@@ -73,7 +72,8 @@
         2,
         1,
         1
-      ]
+      ],
+      "day_old_value_share": 0.5
     },
     {
       "type_id": "regular",
@@ -85,7 +85,6 @@
         "baguette": 1.05
       },
       "wtp_spread": 1.25,
-      "day_old_penalty": 2.0,
       "basket_extra_mean": 1.2,
       "hourly_shape": [
         2,
@@ -110,7 +109,8 @@
         5,
         4,
         3
-      ]
+      ],
+      "day_old_value_share": 0.65
     },
     {
       "type_id": "bargain",
@@ -122,7 +122,6 @@
         "baguette": 0.75
       },
       "wtp_spread": 0.6,
-      "day_old_penalty": 1.0,
       "basket_extra_mean": 0.5,
       "hourly_shape": [
         0.5,
@@ -147,7 +146,8 @@
         4,
         5,
         6
-      ]
+      ],
+      "day_old_value_share": 0.8
     }
   ],
   "daily_customers": {

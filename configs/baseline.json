@@ -48,7 +48,7 @@
         "baguette": 0.7875
       },
       "wtp_spread": 1.65,
-      "day_old_penalty": 3.0,
+      "day_old_value_share": 0.5,
       "basket_extra_mean": 0.22,
       "hourly_shape": [
         10,
@@ -85,7 +85,7 @@
         "baguette": 1.1025
       },
       "wtp_spread": 1.375,
-      "day_old_penalty": 2.0,
+      "day_old_value_share": 0.65,
       "basket_extra_mean": 1.32,
       "hourly_shape": [
         2,
@@ -122,7 +122,7 @@
         "baguette": 0.7875
       },
       "wtp_spread": 0.66,
-      "day_old_penalty": 1.0,
+      "day_old_value_share": 0.8,
       "basket_extra_mean": 0.55,
       "hourly_shape": [
         0.5,

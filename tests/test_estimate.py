@@ -42,7 +42,7 @@ def test_fit_mnl_returns_one_row_per_parameter(small_scenario):
     choices = simulate_history(small_scenario).view("truth").choices
     pooled = fit_mnl(choices, small_scenario)
     assert list(pooled.columns) == ["parameter", "product_id", "estimate"]
-    assert pooled["parameter"].tolist() == ["w"] * len(small_scenario.products) + ["sigma", "delta"]
+    assert pooled["parameter"].tolist() == ["w"] * len(small_scenario.products) + ["sigma", "day_old_value_share"]
     assert pooled.loc[pooled["parameter"] == "sigma", "estimate"].iloc[0] > 0
     one_type = fit_mnl(choices, small_scenario, type_id="regular")
     assert len(one_type) == len(pooled)

@@ -1,9 +1,10 @@
 """
 MNL estimation by maximum likelihood (Lectures 14-15).
 
-Utility (w - p - delta*age)/sigma is linear in beta_j = w_j/sigma, alpha = 1/sigma,
-gamma = delta/sigma, so the log-likelihood is concave. Fitted values are mapped back to
-dollars (w, sigma, delta) to compare with the scenario's true inputs (the recovery check).
+Utility (w_j * r**age - p)/sigma = beta_j * r**age - alpha * p with beta_j = w_j/sigma, alpha = 1/sigma,
+and r = share of value a day-old item keeps. The log-likelihood is concave in (beta, alpha) for fixed r;
+all three are fitted jointly with an analytic gradient. Fitted values are mapped back to dollars
+(w, sigma) and r to compare with the scenario's true inputs (the recovery check).
 Each row of choices.csv is one pick: the options on the shelf (with prices) and what was
 chosen, where leaving has utility zero. A tiny ridge on beta keeps estimates finite when
 the data contain no walk-outs (register view), which is exactly the case that misleads.
@@ -25,7 +26,8 @@ MIN_PRICE_COEFFICIENT = 1e-3  # alpha = 1/sigma lower bound, so sigma stays fini
 BETA_RIDGE_PENALTY = 1e-5  # per-row ridge on beta; negligible when walk-outs are observed
 MAX_ITERATIONS = 2000
 GRADIENT_TOLERANCE = 1e-9
-PARAMETERS = ["w", "sigma", "delta"]
+PARAMETERS = ["w", "sigma", "day_old_value_share"]
+DAY_OLD_SHARE_BOUNDS = (0.01, 1.5)  # search range for r; true values lie in (0, 1]
 
 
 def parse_options(options: str) -> dict[tuple[str, int], float]:
@@ -90,11 +92,13 @@ def build_pick_observations(choices: pd.DataFrame, scenario: Scenario, type_id: 
 
 
 def negative_log_likelihood(parameters: np.ndarray, observations: PickObservations) -> tuple[float, np.ndarray]:
-    """Average negative log-likelihood per pick and its gradient; parameters = [beta..., alpha, gamma]."""
+    """Average negative log-likelihood per pick and its gradient; parameters = [beta..., alpha, r]."""
     product_count = observations.product_count
     beta = parameters[:product_count]
-    alpha, gamma = parameters[product_count], parameters[product_count + 1]
-    utility = beta[observations.product_index] - alpha * observations.price - gamma * observations.age
+    alpha, day_old_share = parameters[product_count], parameters[product_count + 1]
+    value_multiplier = 1.0 + (day_old_share - 1.0) * observations.age  # 1 for fresh, r for day-old
+    option_beta = beta[observations.product_index]
+    utility = option_beta * value_multiplier - alpha * observations.price
 
     row_maximum = np.maximum(np.maximum.reduceat(utility, observations.row_starts), 0.0)  # 0.0 = leaving
     shifted_exponentials = np.exp(utility - row_maximum[observations.row_of_option])
@@ -107,11 +111,16 @@ def negative_log_likelihood(parameters: np.ndarray, observations: PickObservatio
     chosen = observations.chosen_entry[chose_something]
     log_likelihood = utility[chosen].sum() - (row_maximum + np.log(denominator)).sum()
 
-    beta_gradient = np.bincount(observations.product_index, weights=probability, minlength=product_count)
-    beta_gradient -= np.bincount(observations.product_index[chosen], minlength=product_count)
+    beta_gradient = np.bincount(
+        observations.product_index, weights=probability * value_multiplier, minlength=product_count
+    )
+    beta_gradient -= np.bincount(
+        observations.product_index[chosen], weights=value_multiplier[chosen], minlength=product_count
+    )
     alpha_gradient = observations.price[chosen].sum() - probability @ observations.price
-    gamma_gradient = observations.age[chosen].sum() - probability @ observations.age
-    gradient = np.concatenate([beta_gradient, [alpha_gradient, gamma_gradient]])
+    share_sensitivity = option_beta * observations.age  # d utility / d r
+    share_gradient = probability @ share_sensitivity - share_sensitivity[chosen].sum()
+    gradient = np.concatenate([beta_gradient, [alpha_gradient, share_gradient]])
 
     ridge_value = 0.5 * BETA_RIDGE_PENALTY * beta @ beta
     ridge_gradient = np.concatenate([BETA_RIDGE_PENALTY * beta, [0.0, 0.0]])
@@ -122,8 +131,8 @@ def fit_mnl(choices: pd.DataFrame, scenario: Scenario, type_id: str | None = Non
     """Fit one MNL (for one type, or pooled if type_id is None); columns: parameter, product_id, estimate."""
     observations = build_pick_observations(choices, scenario, type_id=type_id)
     product_count = observations.product_count
-    start = np.concatenate([np.zeros(product_count), [1.0, 0.0]])
-    bounds = [(None, None)] * product_count + [(MIN_PRICE_COEFFICIENT, None), (None, None)]
+    start = np.concatenate([np.zeros(product_count), [1.0, 1.0]])
+    bounds = [(None, None)] * product_count + [(MIN_PRICE_COEFFICIENT, None), DAY_OLD_SHARE_BOUNDS]
     result = minimize(
         negative_log_likelihood,
         start,
@@ -133,18 +142,18 @@ def fit_mnl(choices: pd.DataFrame, scenario: Scenario, type_id: str | None = Non
         bounds=bounds,
         options={"maxiter": MAX_ITERATIONS, "gtol": GRADIENT_TOLERANCE, "ftol": 1e-14},
     )
-    beta, alpha, gamma = result.x[:product_count], result.x[product_count], result.x[product_count + 1]
+    beta, alpha, day_old_share = result.x[:product_count], result.x[product_count], result.x[product_count + 1]
     rows = [
         {"parameter": "w", "product_id": product.product_id, "estimate": beta[position] / alpha}
         for position, product in enumerate(scenario.products)
     ]
     rows.append({"parameter": "sigma", "product_id": None, "estimate": 1.0 / alpha})
-    rows.append({"parameter": "delta", "product_id": None, "estimate": gamma / alpha})
+    rows.append({"parameter": "day_old_value_share", "product_id": None, "estimate": day_old_share})
     return pd.DataFrame(rows, columns=["parameter", "product_id", "estimate"])
 
 
 def recovery_table(choices: pd.DataFrame, scenario: Scenario) -> pd.DataFrame:
-    """True vs. estimated w, sigma, delta per type, with signed relative error (estimate - true) / true."""
+    """True vs. estimated w, sigma, day-old value share per type, with relative error (estimate - true) / true."""
     tables = []
     for customer_type in scenario.customer_types:
         fitted = fit_mnl(choices, scenario, type_id=customer_type.type_id)
@@ -153,7 +162,7 @@ def recovery_table(choices: pd.DataFrame, scenario: Scenario) -> pd.DataFrame:
             for product in scenario.products
         }
         true_values[("sigma", None)] = customer_type.wtp_spread
-        true_values[("delta", None)] = customer_type.day_old_penalty
+        true_values[("day_old_value_share", None)] = customer_type.day_old_value_share
         fitted["true"] = [
             true_values[(parameter, None if pd.isna(product_id) else product_id)]
             for parameter, product_id in zip(fitted["parameter"], fitted["product_id"], strict=True)
