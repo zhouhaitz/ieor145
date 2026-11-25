@@ -17,7 +17,7 @@ hour-by-hour pricing of baked goods beat fixed prices and fixed markdowns?
 | `configs/baseline_inputs.json` | Starting assumptions (edit these) |
 | `configs/baseline.json` | Calibrated baseline, produced by `python -m bakery_sim calibrate --config configs/baseline_inputs.json --write configs/baseline.json --log docs/calibration_log.csv` |
 | `docs/sources.md` | Where each number comes from (sourced, assumption, or calibrated) |
-| `notebooks/` | Teammate-facing notebook |
+| `notebooks/` | `generate_synthetic_data.ipynb` (get data) and `policy_template.ipynb` (build and compare a pricing policy) |
 | `tests/` | `make check` (fast, run after every change) and `make check-all` (adds slow statistical checks) |
 
 ## Output tables
