@@ -1,0 +1,446 @@
+{
+  "_comment": "STARTING ASSUMPTIONS (before calibration). Edit this file, then run `python -m bakery_sim calibrate` to produce configs/baseline.json. Sources: docs/sources.md.",
+  "scenario_id": "baseline",
+  "seed": 145,
+  "start_date": "2026-09-07",
+  "n_history_days": 60,
+  "n_test_days": 30,
+  "open_hour": 7,
+  "close_hour": 17,
+  "products": [
+    {
+      "product_id": "croissant",
+      "name": "Butter croissant",
+      "base_price": 5.0,
+      "unit_cost": 1.5,
+      "shelf_life_days": 1
+    },
+    {
+      "product_id": "cookie",
+      "name": "Chocolate chip cookie",
+      "base_price": 3.5,
+      "unit_cost": 1.05,
+      "shelf_life_days": 1
+    },
+    {
+      "product_id": "sourdough",
+      "name": "Sourdough loaf",
+      "base_price": 7.0,
+      "unit_cost": 2.1,
+      "shelf_life_days": 2
+    },
+    {
+      "product_id": "baguette",
+      "name": "Baguette",
+      "base_price": 4.5,
+      "unit_cost": 1.35,
+      "shelf_life_days": 1
+    }
+  ],
+  "customer_types": [
+    {
+      "type_id": "commuter",
+      "name": "Morning commuter",
+      "wtp_multiplier": {
+        "croissant": 1.15,
+        "cookie": 0.95,
+        "sourdough": 0.55,
+        "baguette": 0.75
+      },
+      "wtp_spread": 1.5,
+      "basket_extra_mean": 0.2,
+      "hourly_shape": [
+        10,
+        12,
+        9,
+        6,
+        4,
+        3,
+        2,
+        2,
+        2,
+        2
+      ],
+      "weekend_hourly_shape": [
+        3,
+        4,
+        5,
+        5,
+        4,
+        3,
+        2,
+        2,
+        1,
+        1
+      ],
+      "day_old_value_share": 0.5
+    },
+    {
+      "type_id": "regular",
+      "name": "Regular / household",
+      "wtp_multiplier": {
+        "croissant": 0.95,
+        "cookie": 0.85,
+        "sourdough": 1.05,
+        "baguette": 1.05
+      },
+      "wtp_spread": 1.25,
+      "basket_extra_mean": 1.2,
+      "hourly_shape": [
+        2,
+        4,
+        7,
+        9,
+        10,
+        10,
+        9,
+        7,
+        5,
+        4
+      ],
+      "weekend_hourly_shape": [
+        2,
+        5,
+        8,
+        10,
+        10,
+        9,
+        7,
+        5,
+        4,
+        3
+      ],
+      "day_old_value_share": 0.65
+    },
+    {
+      "type_id": "bargain",
+      "name": "Late-day bargain hunter",
+      "wtp_multiplier": {
+        "croissant": 0.75,
+        "cookie": 0.75,
+        "sourdough": 0.7,
+        "baguette": 0.75
+      },
+      "wtp_spread": 0.6,
+      "basket_extra_mean": 0.5,
+      "hourly_shape": [
+        0.5,
+        0.5,
+        1,
+        1,
+        1,
+        2,
+        3,
+        5,
+        7,
+        8
+      ],
+      "weekend_hourly_shape": [
+        0.5,
+        0.5,
+        1,
+        1,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "day_old_value_share": 0.8
+    }
+  ],
+  "daily_customers": {
+    "Mon": 288,
+    "Tue": 279,
+    "Wed": 292,
+    "Thu": 286,
+    "Fri": 322,
+    "Sat": 356,
+    "Sun": 304
+  },
+  "type_share": {
+    "Mon": {
+      "commuter": 0.35,
+      "regular": 0.4,
+      "bargain": 0.25
+    },
+    "Tue": {
+      "commuter": 0.35,
+      "regular": 0.4,
+      "bargain": 0.25
+    },
+    "Wed": {
+      "commuter": 0.35,
+      "regular": 0.4,
+      "bargain": 0.25
+    },
+    "Thu": {
+      "commuter": 0.35,
+      "regular": 0.4,
+      "bargain": 0.25
+    },
+    "Fri": {
+      "commuter": 0.33,
+      "regular": 0.42,
+      "bargain": 0.25
+    },
+    "Sat": {
+      "commuter": 0.1,
+      "regular": 0.65,
+      "bargain": 0.25
+    },
+    "Sun": {
+      "commuter": 0.08,
+      "regular": 0.67,
+      "bargain": 0.25
+    }
+  },
+  "observed_hourly_shape": {
+    "Mon": [
+      0.0612,
+      0.0886,
+      0.1027,
+      0.1084,
+      0.1133,
+      0.1147,
+      0.1101,
+      0.1036,
+      0.0933,
+      0.104
+    ],
+    "Tue": [
+      0.0612,
+      0.0886,
+      0.1027,
+      0.1084,
+      0.1133,
+      0.1147,
+      0.1101,
+      0.1036,
+      0.0933,
+      0.104
+    ],
+    "Wed": [
+      0.0612,
+      0.0886,
+      0.1027,
+      0.1084,
+      0.1133,
+      0.1147,
+      0.1101,
+      0.1036,
+      0.0933,
+      0.104
+    ],
+    "Thu": [
+      0.0612,
+      0.0886,
+      0.1027,
+      0.1084,
+      0.1133,
+      0.1147,
+      0.1101,
+      0.1036,
+      0.0933,
+      0.104
+    ],
+    "Fri": [
+      0.0612,
+      0.0886,
+      0.1027,
+      0.1084,
+      0.1133,
+      0.1147,
+      0.1101,
+      0.1036,
+      0.0933,
+      0.104
+    ],
+    "Sat": [
+      0.0545,
+      0.0837,
+      0.1104,
+      0.1256,
+      0.1277,
+      0.1222,
+      0.1097,
+      0.0976,
+      0.0831,
+      0.0856
+    ],
+    "Sun": [
+      0.035,
+      0.0771,
+      0.1118,
+      0.1284,
+      0.1338,
+      0.127,
+      0.115,
+      0.0923,
+      0.0919,
+      0.0876
+    ]
+  },
+  "demand_multiplier_cv": 0.15,
+  "price_ladder": [
+    1.0,
+    0.85,
+    0.7,
+    0.55,
+    0.4
+  ],
+  "bake_schedule": [
+    {
+      "product_id": "croissant",
+      "hour": 7,
+      "share": 0.6
+    },
+    {
+      "product_id": "croissant",
+      "hour": 10,
+      "share": 0.4
+    },
+    {
+      "product_id": "cookie",
+      "hour": 7,
+      "share": 0.6
+    },
+    {
+      "product_id": "cookie",
+      "hour": 13,
+      "share": 0.4
+    },
+    {
+      "product_id": "sourdough",
+      "hour": 7,
+      "share": 0.7
+    },
+    {
+      "product_id": "sourdough",
+      "hour": 13,
+      "share": 0.3
+    },
+    {
+      "product_id": "baguette",
+      "hour": 7,
+      "share": 0.6
+    },
+    {
+      "product_id": "baguette",
+      "hour": 14,
+      "share": 0.4
+    }
+  ],
+  "bake_quantities": {
+    "Mon": {
+      "croissant": 90,
+      "cookie": 70,
+      "sourdough": 45,
+      "baguette": 50
+    },
+    "Tue": {
+      "croissant": 90,
+      "cookie": 70,
+      "sourdough": 45,
+      "baguette": 50
+    },
+    "Wed": {
+      "croissant": 90,
+      "cookie": 70,
+      "sourdough": 45,
+      "baguette": 50
+    },
+    "Thu": {
+      "croissant": 95,
+      "cookie": 72,
+      "sourdough": 48,
+      "baguette": 52
+    },
+    "Fri": {
+      "croissant": 100,
+      "cookie": 78,
+      "sourdough": 52,
+      "baguette": 56
+    },
+    "Sat": {
+      "croissant": 110,
+      "cookie": 85,
+      "sourdough": 75,
+      "baguette": 65
+    },
+    "Sun": {
+      "croissant": 100,
+      "cookie": 80,
+      "sourdough": 70,
+      "baguette": 60
+    }
+  },
+  "supply_ratio": 1.2,
+  "salvage_fraction": 0.33,
+  "carryover_enabled": true,
+  "historical_pricing": {
+    "end_of_day_hours": 1,
+    "end_of_day_level": 0.7,
+    "day_old_level": 0.55,
+    "promo_days_of_week": [
+      "Tue",
+      "Wed"
+    ],
+    "promo_product_id": "cookie",
+    "promo_level": 0.85,
+    "promo_hours": [
+      10,
+      11,
+      12,
+      13
+    ],
+    "menu_increase_day_index": 30,
+    "menu_increase_fraction": 0.05,
+    "daily_deal_probability": 0.4,
+    "daily_deal_levels": [
+      0.85,
+      0.7,
+      0.55
+    ],
+    "daily_deal_hours": 2
+  },
+  "targets": {
+    "customers_per_day": [
+      200,
+      450
+    ],
+    "purchase_rate": [
+      0.6,
+      0.9
+    ],
+    "items_per_purchase": [
+      1.2,
+      2.2
+    ],
+    "average_ticket": [
+      5.0,
+      14.0
+    ],
+    "leftover_share": [
+      0.05,
+      0.2
+    ],
+    "busiest_hour_customers": [
+      0,
+      60
+    ],
+    "max_item_revenue_share": [
+      0.0,
+      0.5
+    ],
+    "hourly_shape_error": [
+      0.0,
+      0.02
+    ],
+    "price_elasticity": [
+      0.8,
+      2.0
+    ]
+  }
+}
