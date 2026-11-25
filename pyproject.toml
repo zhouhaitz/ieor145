@@ -1,0 +1,17 @@
+[project]
+name = "bakery_sim"
+version = "0.1.0"
+requires-python = ">=3.10"
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["slow: statistical checks that take longer (run with `make check-all`)"]
+addopts = "-q"
+pythonpath = ["."]

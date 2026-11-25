@@ -1,0 +1,133 @@
+"""
+Scenario configuration for the synthetic bakery.
+
+A Scenario holds every input the generator uses: products, customer types,
+hourly arrival patterns, bake schedule, pricing ladder, the historical pricing
+practice, and the report-card targets. Nothing in the generator is hard-coded;
+change a number here (or in configs/*.json) and rerun.
+"""
+
+from __future__ import annotations
+
+import json
+from dataclasses import asdict, dataclass, field, replace
+from pathlib import Path
+
+DAYS_OF_WEEK = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+OUTSIDE_OPTION = "none"
+
+
+@dataclass(frozen=True)
+class Product:
+    """One baked item. Ages 0..shelf_life_days-1 can be sold; age 1 is 'day-old'."""
+
+    product_id: str
+    name: str
+    base_price: float  # menu price in dollars
+    unit_cost: float  # cost to bake one unit, dollars
+    shelf_life_days: int  # 1 = same day only, 2 = can be sold day-old
+
+
+@dataclass(frozen=True)
+class CustomerType:
+    """A customer segment; each arrival belongs to exactly one type (hidden from the bakery)."""
+
+    type_id: str
+    name: str
+    wtp_multiplier: dict[str, float]  # average willingness to pay = multiplier * base_price, per product
+    wtp_spread: float  # sigma_k in dollars; larger = less price sensitive
+    day_old_penalty: float  # delta_k in dollars subtracted from value of a day-old item
+    basket_extra_mean: float  # m_k; planned basket size N = 1 + Poisson(m_k)
+    hourly_shape: list[float]  # relative arrival intensity per open hour (normalized in arrivals.py)
+    weekend_hourly_shape: list[float]  # same for Sat/Sun
+
+
+@dataclass(frozen=True)
+class BakeBatch:
+    """A scheduled batch: `share` of the day's planned quantity of `product_id` arrives at `hour`."""
+
+    product_id: str
+    hour: int
+    share: float
+
+
+@dataclass(frozen=True)
+class HistoricalPricing:
+    """The bakery's past pricing practice, used only to generate the history log."""
+
+    end_of_day_hours: int  # last N open hours get the end-of-day discount
+    end_of_day_level: float  # ladder level used at end of day, e.g. 0.70
+    day_old_level: float  # ladder level for day-old items all day
+    promo_days_of_week: list[str]  # weekdays with a promo
+    promo_product_id: str
+    promo_level: float
+    promo_hours: list[int]  # open hours the promo applies (not near closing, to avoid confounding)
+    menu_increase_day_index: int  # day index from which base prices rise
+    menu_increase_fraction: float  # e.g. 0.05 = +5%
+
+
+@dataclass(frozen=True)
+class Scenario:
+    """Every input to one synthetic-data run."""
+
+    scenario_id: str
+    seed: int
+    start_date: str  # ISO date of day index 0
+    n_history_days: int
+    n_test_days: int
+    open_hour: int  # first open hour, 24h clock
+    close_hour: int  # closing time, 24h clock (exclusive)
+    products: list[Product]
+    customer_types: list[CustomerType]
+    daily_customers: dict[str, float]  # expected arrivals per day of week (all types)
+    type_share: dict[str, dict[str, float]]  # day of week -> type_id -> share of arrivals
+    demand_multiplier_cv: float  # coefficient of variation of the daily multiplier M_d (Gamma, mean 1)
+    price_ladder: list[float]  # allowed price levels as fractions of base price
+    bake_schedule: list[BakeBatch]
+    bake_quantities: dict[str, dict[str, int]]  # day of week -> product_id -> units baked that day
+    supply_ratio: float  # baked / expected full-price demand (used by calibrate.py to set bake_quantities)
+    salvage_fraction: float  # leftover value as fraction of base price (0 = discard, ~0.33 = resale app)
+    carryover_enabled: bool  # sell leftover multi-day items as day-old tomorrow
+    historical_pricing: HistoricalPricing
+    targets: dict[str, list[float]] = field(default_factory=dict)  # report-card metric -> [low, high]
+
+    @property
+    def open_hours(self) -> list[int]:
+        return list(range(self.open_hour, self.close_hour))
+
+    @property
+    def n_days(self) -> int:
+        return self.n_history_days + self.n_test_days
+
+    def product(self, product_id: str) -> Product:
+        return next(product for product in self.products if product.product_id == product_id)
+
+    def customer_type(self, type_id: str) -> CustomerType:
+        return next(customer_type for customer_type in self.customer_types if customer_type.type_id == type_id)
+
+    def option_keys(self) -> list[tuple[str, int]]:
+        """All sellable (product_id, age) pairs, in a fixed order used for noise columns."""
+        return [(product.product_id, age) for product in self.products for age in range(product.shelf_life_days)]
+
+    def with_overrides(self, **changes) -> Scenario:
+        return replace(self, **changes)
+
+
+def load_scenario(path: str | Path) -> Scenario:
+    """Load a Scenario from a JSON file."""
+    raw = json.loads(Path(path).read_text())
+    return scenario_from_dict(raw)
+
+
+def scenario_from_dict(raw: dict) -> Scenario:
+    raw = dict(raw)
+    raw["products"] = [Product(**product) for product in raw["products"]]
+    raw["customer_types"] = [CustomerType(**customer_type) for customer_type in raw["customer_types"]]
+    raw["bake_schedule"] = [BakeBatch(**batch) for batch in raw["bake_schedule"]]
+    raw["historical_pricing"] = HistoricalPricing(**raw["historical_pricing"])
+    raw.pop("_comment", None)
+    return Scenario(**raw)
+
+
+def save_scenario(scenario: Scenario, path: str | Path) -> None:
+    Path(path).write_text(json.dumps(asdict(scenario), indent=2))
