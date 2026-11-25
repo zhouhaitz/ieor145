@@ -81,6 +81,7 @@ class Scenario:
     customer_types: list[CustomerType]
     daily_customers: dict[str, float]  # expected arrivals per day of week (all types)
     type_share: dict[str, dict[str, float]]  # day of week -> type_id -> share of arrivals
+    observed_hourly_shape: dict[str, list[float]]  # day of week -> real traffic share per open hour (Popular Times)
     demand_multiplier_cv: float  # coefficient of variation of the daily multiplier M_d (Gamma, mean 1)
     price_ladder: list[float]  # allowed price levels as fractions of base price
     bake_schedule: list[BakeBatch]
@@ -114,9 +115,46 @@ class Scenario:
 
 
 def load_scenario(path: str | Path) -> Scenario:
-    """Load a Scenario from a JSON file."""
+    """Load and validate a Scenario from a JSON file."""
     raw = json.loads(Path(path).read_text())
-    return scenario_from_dict(raw)
+    scenario = scenario_from_dict(raw)
+    validate_scenario(scenario)
+    return scenario
+
+
+def validate_scenario(scenario: Scenario) -> None:
+    """Raise ValueError listing every inconsistency in the inputs (caught at load time, not mid-simulation)."""
+    problems = []
+    n_hours = len(scenario.open_hours)
+    product_ids = {product.product_id for product in scenario.products}
+    type_ids = {customer_type.type_id for customer_type in scenario.customer_types}
+    for customer_type in scenario.customer_types:
+        if len(customer_type.hourly_shape) != n_hours or len(customer_type.weekend_hourly_shape) != n_hours:
+            problems.append(f"{customer_type.type_id}: hourly shapes need {n_hours} entries (one per open hour)")
+        if set(customer_type.wtp_multiplier) != product_ids:
+            problems.append(f"{customer_type.type_id}: wtp_multiplier must cover exactly {sorted(product_ids)}")
+        if customer_type.wtp_spread <= 0:
+            problems.append(f"{customer_type.type_id}: wtp_spread must be positive")
+    for day_of_week in DAYS_OF_WEEK:
+        shares = scenario.type_share.get(day_of_week, {})
+        if set(shares) != type_ids or abs(sum(shares.values()) - 1) > 1e-6:
+            problems.append(f"type_share[{day_of_week}] must cover every type and sum to 1")
+        if len(scenario.observed_hourly_shape.get(day_of_week, [])) != n_hours:
+            problems.append(f"observed_hourly_shape[{day_of_week}] needs {n_hours} entries")
+        if set(scenario.bake_quantities.get(day_of_week, {})) != product_ids:
+            problems.append(f"bake_quantities[{day_of_week}] must cover every product")
+    for product_id in product_ids:
+        shares = [batch.share for batch in scenario.bake_schedule if batch.product_id == product_id]
+        if abs(sum(shares) - 1) > 1e-6:
+            problems.append(f"bake_schedule shares for {product_id} must sum to 1")
+    if any(batch.hour not in scenario.open_hours for batch in scenario.bake_schedule):
+        problems.append("every bake batch hour must be an open hour")
+    pricing = scenario.historical_pricing
+    for level in [1.0, pricing.end_of_day_level, pricing.day_old_level, pricing.promo_level]:
+        if not any(abs(level - ladder_level) < 1e-9 for ladder_level in scenario.price_ladder):
+            problems.append(f"price level {level} is not on price_ladder")
+    if problems:
+        raise ValueError("Invalid scenario:\n- " + "\n- ".join(problems))
 
 
 def scenario_from_dict(raw: dict) -> Scenario:

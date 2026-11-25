@@ -7,7 +7,7 @@ from bakery_sim.config import DAYS_OF_WEEK, load_scenario, save_scenario
 
 def test_baseline_loads(baseline_scenario):
     assert baseline_scenario.scenario_id == "baseline"
-    assert len(baseline_scenario.open_hours) == 11
+    assert len(baseline_scenario.open_hours) == 10
 
 
 def test_shapes_match_open_hours(baseline_scenario):
@@ -43,3 +43,13 @@ def test_round_trip(baseline_scenario, tmp_path):
     path = tmp_path / "scenario.json"
     save_scenario(baseline_scenario, path)
     assert load_scenario(path) == baseline_scenario
+
+
+def test_validation_rejects_wrong_shape_length(baseline_scenario):
+    from bakery_sim.config import validate_scenario
+
+    broken_type = baseline_scenario.customer_types[0]
+    broken_type = type(broken_type)(**{**broken_type.__dict__, "hourly_shape": [1.0]})
+    broken = baseline_scenario.with_overrides(customer_types=[broken_type, *baseline_scenario.customer_types[1:]])
+    with pytest.raises(ValueError, match="hourly shapes"):
+        validate_scenario(broken)
